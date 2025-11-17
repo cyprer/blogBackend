@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cypress.persistence.dao.IUserDao">
+    <insert id="insert">
+        insert into users (user_id,phone, password, email, user_name, age, gender, avatar, bio, signature, status, role, create_time, update_time, last_login_time)
+        values (#{userId},#{phone}, #{password}, #{email}, #{username}, #{age}, #{gender}, #{avatarUrl}, #{bio}, #{signature}, #{status}, #{role}, #{createTime}, #{updateTime}, #{lastLoginTime})
+    </insert>
+    <update id="updateById">
+        update users set phone = #{phone}, password = #{password}, email = #{email}, user_name = #{username}, age = #{age}, gender = #{gender}, avatar = #{avatarUrl}, bio = #{bio}, signature = #{signature}, status = #{status}, role = #{role}, create_time = #{createTime}, update_time = #{updateTime}, last_login_time = #{lastLoginTime}
+        where id = #{id}
+    </update>
+
+    <select id="findByPhone" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
+        SELECT * FROM users WHERE phone = #{phone}
+    </select>
+
+    <select id="findByUsername" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
+        SELECT * FROM users WHERE user_name = #{userName}
+    </select>
+
+    <select id="findAllByUsername" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
+        SELECT * FROM users WHERE user_name = #{userName}
+    </select>
+    <select id="selectById" resultType="com.cypress.persistence.po.UserPo">
+        select * from users where user_id = #{userId}
+    </select>
+</mapper>
