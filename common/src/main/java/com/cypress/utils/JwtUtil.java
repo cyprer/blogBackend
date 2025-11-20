@@ -63,14 +63,19 @@ public class JwtUtil {
     }
 
     /**
-     * 验证令牌是否有效（包含签名和过期时间校验）
+     * 验证令牌是否有效（仅基于签名和过期时间）
      * @param token 令牌
-     * @param userId 预期的用户ID（用于校验令牌主体是否匹配）
-     * @return 是否有效
+     * @return 提取的用户ID，如果无效则返回null
      */
-    public boolean validateToken(String token, Long userId) {
-        final String extractedUserId = extractSubject(token);
-        return (extractedUserId.equals(userId.toString()) && !isTokenExpired(token));
+    public Long validateToken(String token) {
+        try {
+            if (isTokenExpired(token)) {
+                return null;
+            }
+            return extractUserId(token);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // 以下为内部工具方法

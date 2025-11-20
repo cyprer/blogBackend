@@ -1,6 +1,7 @@
 package com.cypress.user.model.entity;
 
 import com.cypress.constants.Constants;
+import com.cypress.utils.PasswordEncoder;
 import com.cypress.utils.SnowflakeIdGenerator;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,6 +17,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
+
+    public static String defaultRawPassword ="515221";
 
     /**
      * 用户ID - 唯一标识
@@ -95,19 +98,18 @@ public class User {
     /**
      * 注册用户
      * @param phone 手机号
-     * @param password 密码
      */
-    public void register(String phone, String password) {
+    public void register(String phone) {
         this.userId = SnowflakeIdGenerator.generateId();
         this.phone = phone;
-        this.password = password;
+        this.password = defaultRawPassword;
         this.email = null;
         this.username = generateDefaultUsername(phone);
         this.age = 18;
         this.gender = 0;
-        this.avatarUrl = "";
-        this.bio = "";
-        this.signature = "";
+        this.avatarUrl = null;
+        this.bio = null;
+        this.signature = null;
         this.status = 1;
         this.role = 0; // 默认普通用户
         this.createTime = LocalDateTime.now();
@@ -124,16 +126,6 @@ public class User {
     private String generateDefaultUsername(String phone) {
         // 使用手机号后4位作为默认用户名
         return Constants.UserConstants.USER + phone.substring(phone.length() - 4);
-    }
-
-    /**
-     * 更新用户名
-     * @param username 新用户名
-     */
-    public void updateUsername(String username) {
-        this.username = username;
-        this.updateTime = LocalDateTime.now();
-        this.lastLoginTime = LocalDateTime.now();
     }
 
 }

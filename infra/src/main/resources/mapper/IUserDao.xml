@@ -6,9 +6,10 @@
         insert into users (user_id,phone, password, email, user_name, age, gender, avatar, bio, signature, status, role, create_time, update_time, last_login_time)
         values (#{userId},#{phone}, #{password}, #{email}, #{username}, #{age}, #{gender}, #{avatarUrl}, #{bio}, #{signature}, #{status}, #{role}, #{createTime}, #{updateTime}, #{lastLoginTime})
     </insert>
-    <update id="updateById">
+
+    <update id="updateByUserId">
         update users set phone = #{phone}, password = #{password}, email = #{email}, user_name = #{username}, age = #{age}, gender = #{gender}, avatar = #{avatarUrl}, bio = #{bio}, signature = #{signature}, status = #{status}, role = #{role}, create_time = #{createTime}, update_time = #{updateTime}, last_login_time = #{lastLoginTime}
-        where id = #{id}
+        where user_id = #{userId}
     </update>
 
     <select id="findByPhone" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
@@ -22,7 +23,12 @@
     <select id="findAllByUsername" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
         SELECT * FROM users WHERE user_name = #{userName}
     </select>
-    <select id="selectById" resultType="com.cypress.persistence.po.UserPo">
+
+    <select id="selectByUserId" resultType="com.cypress.persistence.po.UserPo">
         select * from users where user_id = #{userId}
+    </select>
+
+    <select id="findByEmail" parameterType="string" resultType="com.cypress.persistence.po.UserPo">
+        SELECT * FROM users WHERE email = #{email}
     </select>
 </mapper>

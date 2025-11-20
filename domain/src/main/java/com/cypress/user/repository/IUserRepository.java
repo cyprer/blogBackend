@@ -43,7 +43,7 @@ public interface IUserRepository {
      * @param userId 用户ID
      * @return 用户实体
      */
-    User findById(Long userId);
+    User findByUserId(Long userId);
 
     /**
      * 更新用户
@@ -59,5 +59,19 @@ public interface IUserRepository {
      */
     void saveCode(String phone, String code);
 
+    /**
+     * 验证验证码
+     * @param phone 手机号
+     * @param code 验证码
+     * @return 验证结果
+     */
     VerificationResult validCode(String phone, String code);
+
+    /**
+     * 根据邮箱查找用户
+     * @param email 邮箱
+     * @return 用户实体
+     */
+    User findByEmail(String email);
+
 }

@@ -50,25 +50,24 @@ public class UserRepository implements IUserRepository {
     }
 
     @Override
-    public User findById(Long userId) {
-        UserPo userPo = userDao.selectById(userId);
+    public User findByUserId(Long userId) {
+        UserPo userPo = userDao.selectByUserId(userId);
         return convertToDomain(userPo);
     }
 
     @Override
     public User update(User user) {
         UserPo userPo = convertToPo(user);
-        userDao.updateById(userPo);
+        userDao.updateByUserId(userPo);
+        user = findByUserId(user.getUserId());
         return user;
     }
 
     @Override
     public void saveCode(String phone, String code) {
-        stringRedisTemplate.opsForValue().set(
-                Constants.UserConstants.USER + phone + Constants.RedisConstants.VERIFICATION_CODE_PREFIX,
-                code,
-                Constants.RedisConstants.VERIFICATION_CODE_EXPIRE,
-                TimeUnit.MILLISECONDS
+        String redisKey = Constants.UserConstants.USER + phone + Constants.RedisConstants.VERIFICATION_CODE_PREFIX;
+        long expire = Constants.RedisConstants.VERIFICATION_CODE_EXPIRE;
+        stringRedisTemplate.opsForValue().set(redisKey, code, expire, TimeUnit.MILLISECONDS
         );
 
     }
@@ -86,6 +85,12 @@ public class UserRepository implements IUserRepository {
         } else {
             return VerificationResult.INVALID;  // 验证码错误
         }
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        UserPo userPo = userDao.findByEmail(email);
+        return convertToDomain(userPo);
     }
 
     /**

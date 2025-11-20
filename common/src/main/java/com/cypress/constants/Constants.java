@@ -15,7 +15,7 @@ public class Constants {
          * 默认5分钟
          * 测试阶段先设置一个很大很大的值
          */
-        public static final long VERIFICATION_CODE_EXPIRE = 3*30*24*12*5 * 60 * 1000L;
+        public static final long VERIFICATION_CODE_EXPIRE =5 * 60 * 1000L;
     }
 
     /**

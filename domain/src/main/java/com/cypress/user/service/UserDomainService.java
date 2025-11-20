@@ -1,16 +1,23 @@
 package com.cypress.user.service;
 
+import com.cypress.dto.RegisterDto;
+import com.cypress.dto.UserInfo;
 import com.cypress.enums.VerificationResult;
+import com.cypress.request.UpdateUserInfoRequest;
 import com.cypress.response.Response;
 import com.cypress.user.repository.IUserRepository;
 import com.cypress.utils.CodeUtil;
 import com.cypress.utils.PasswordEncoder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.cypress.user.model.entity.User;
+
+
 import java.util.List;
+import java.time.LocalDateTime;
 
 /**
  * 用户领域服务 - 领域层
@@ -24,8 +31,6 @@ public class UserDomainService implements IUserDomainService{
 
     @Autowired
     private IUserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
     /**
      * 发送验证码
      * @param phone 手机号
@@ -40,65 +45,32 @@ public class UserDomainService implements IUserDomainService{
         return code;
     }
 
-
     /**
-     * 用户注册
-     * @param phone 手机号
-     * @param password 密码
-     * @return 注册成功的用户
+     * @param phone
+     * @param code
+     * @return
      */
     @Override
-    public Response<User> register(String phone, String password) {
-        // 验证手机号格式
-        if (!StringUtils.hasText(phone)) {
+    public Response<User> register(String phone, String code) {
+        // 调用领域服务进行注册
+        VerificationResult result = validCode(phone, code);
+        if (result != VerificationResult.SUCCESS) {
             return Response.<User>builder()
-                    .code("400")
-                    .info("手机号不能为空")
+                    .code(result.getCode())
+                    .info(result.getInfo())
                     .build();
         }
-        if (!isValidPhone(phone)) {
-            return Response.<User>builder()
-                    .code("400")
-                    .info("手机号格式不正确")
-                    .build();
-        }
-
-        // 验证密码
-        if (!StringUtils.hasText(password)) {
-            return Response.<User>builder()
-                    .code("400")
-                    .info("密码不能为空")
-                    .build();
-        }
-        if (password.length() < 6) {
-            return Response.<User>builder()
-                    .code("400")
-                    .info("密码长度不能少于6位")
-                    .build();
-        }
-
-        // 检查手机号是否已注册
-        User existingUser = userRepository.findByPhone(phone);
-        if (existingUser != null) {
-            return Response.<User>builder()
-                    .code("400")
-                    .info("该手机号已注册")
-                    .build();
-        }
-
-        // 加密密码
-        String encodedPassword = passwordEncoder.encode(password);
-
-        // 创建用户实体
         User user = new User();
-        user.register(phone, encodedPassword);
+        user.register(phone);
+        // 使用默认密码进行加密
 
-        // 保存用户
-        User savedUser = userRepository.save(user);
+        String encodedPassword = PasswordEncoder.encode(user.getPassword());
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
         return Response.<User>builder()
                 .code("200")
                 .info("注册成功")
-                .data(savedUser)
+                .data(user)
                 .build();
     }
 
@@ -109,7 +81,7 @@ public class UserDomainService implements IUserDomainService{
      * @return 登录成功的用户
      */
     @Override
-    public Response<User> login(String loginKey, String password) {
+    public Response<User> loginByPassword(String loginKey, String password) {
         // 验证参数
         if (!StringUtils.hasText(loginKey)) {
             return Response.<User>builder()
@@ -152,18 +124,19 @@ public class UserDomainService implements IUserDomainService{
         if (user == null) {
             return Response.<User>builder()
                     .code("400")
-                    .info("用户不存在或密码错误")
+                    .info("用户不存在")
                     .build();
         }
         
         // 验证密码
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!PasswordEncoder.matches(password, user.getPassword())) {
             return Response.<User>builder()
                     .code("400")
-                    .info("用户不存在或密码错误")
+                    .info("密码错误")
                     .build();
         }
-
+        user.setLastLoginTime(LocalDateTime.now());
+        userRepository.update(user);
         return Response.<User>builder()
                 .code("200")
                 .info("登录成功")
@@ -172,27 +145,91 @@ public class UserDomainService implements IUserDomainService{
     }
 
     /**
-     * 更新用户名
-     * @param userId 用户ID
-     * @param newUsername 新用户名
-     * @return 更新后的用户
+     * @param phone
+     * @param code
+     * @return
      */
     @Override
-    public Response<User> updateUsername(Long userId, String newUsername) {
+    public Response<User> loginByCode(String phone, String code) {
+        // 验证参数
+        if (!StringUtils.hasText(phone)) {
+            return Response.<User>builder()
+                    .code("400")
+                    .info("手机号不能为空")
+                    .build();
+        }
+        if (!StringUtils.hasText(code)) {
+            return Response.<User>builder()
+                    .code("400")
+                    .info("验证码不能为空")
+                    .build();
+        }
+        VerificationResult result = validCode(phone, code);
+        if (result != VerificationResult.SUCCESS) {
+            return Response.<User>builder()
+                    .code(result.getCode())
+                    .info(result.getInfo())
+                    .build();
+        }
+        User user = userRepository.findByPhone(phone);
+        if (user == null) {
+            return Response.<User>builder()
+                    .code("400")
+                    .info("用户不存在")
+                    .build();
+        }
+        user.setLastLoginTime(LocalDateTime.now());
+        userRepository.update(user);
+        return Response.<User>builder()
+                .code("200")
+                .info("登录成功")
+                .data(user)
+                .build();
+
+    }
+
+
+    /**
+     * 验证验证码
+     * @param phone 手机号
+     * @param code 验证码
+     * @return 验证结果
+     */
+    @Override
+    public VerificationResult validCode(String phone, String code) {
+        return userRepository.validCode(phone, code);
+    }
+
+    /**
+     * 设置用户密码
+     * @param userId 用户ID
+     * @param password 密码
+     * @return 设置成功的用户
+     */
+    @Override
+    public Response<User> setPassword(Long userId, String password) {
+        // 验证参数
         if (userId == null) {
             return Response.<User>builder()
                     .code("400")
                     .info("用户ID不能为空")
                     .build();
         }
-        if (!StringUtils.hasText(newUsername)) {
+        if (!StringUtils.hasText(password)) {
             return Response.<User>builder()
                     .code("400")
-                    .info("用户名不能为空")
+                    .info("密码不能为空")
+                    .build();
+        }
+        if (password.length() < 6) {
+            return Response.<User>builder()
+                    .code("400")
+                    .info("密码长度不能少于6位")
                     .build();
         }
 
-        User user = userRepository.findById(userId);
+        // 查找用户
+        User user = userRepository.findByUserId(userId);
         if (user == null) {
             return Response.<User>builder()
                     .code("400")
@@ -200,18 +237,149 @@ public class UserDomainService implements IUserDomainService{
                     .build();
         }
 
-        user.updateUsername(newUsername);
-        User updatedUser = userRepository.update(user);
+        // 加密密码
+        String encodedPassword = PasswordEncoder.encode(password);
+
+        // 设置密码
+        user.setPassword(encodedPassword);
+        user.setUpdateTime(LocalDateTime.now());
+        userRepository.update(user);
         return Response.<User>builder()
                 .code("200")
-                .info("用户名更新成功")
-                .data(updatedUser)
+                .info("设置密码成功")
                 .build();
     }
 
+    /**设置用户手机号
+     * @param userId
+     * @param phone
+     * @return
+     */
     @Override
-    public VerificationResult validCode(String phone, String code) {
-        return userRepository.validCode(phone, code);
+    public Response<String> setPhone(Long userId, String phone) {
+        User user = userRepository.findByUserId(userId);
+        if (user == null) {
+            return Response.<String>builder()
+                    .code("400")
+                    .info("用户不存在")
+                    .build();
+        }
+        user.setPhone(phone);
+        userRepository.update(user);
+        return Response.<String>builder()
+                .code("200")
+                .info("设置手机号成功")
+                .data(phone)
+                .build();
+    }
+
+    /**获取用户信息
+     * @param userId
+     * @return
+     */
+    @Override
+    public Response<User> getUserInfo(Long userId) {
+        User user = userRepository.findByUserId(userId);
+        if (user != null) {
+            return Response.<User>builder()
+                    .code("200")
+                    .info("获取用户信息成功")
+                    .data(user)
+                    .build();
+        }
+        return Response.<User>builder()
+                .code("400")
+                .info("用户不存在")
+                .build();
+    }
+
+    /**
+     * @param userId
+     * @param updateUserInfoRequest
+     * @return
+     */
+    @Override
+    public Response<User> updateUserInfo(Long userId, UpdateUserInfoRequest updateUserInfoRequest) {
+        // 验证用户是否存在
+        User user = userRepository.findByUserId(userId);
+        if (user == null) {
+            return Response.<User>builder()
+                    .code("400")
+                    .info("用户不存在")
+                    .build();
+        }
+
+        // 验证要更新的userId是否已被占用（如果请求中包含新的userId）
+        if (updateUserInfoRequest.getUserId() != null && !updateUserInfoRequest.getUserId().equals(userId)) {
+            User existingUser = userRepository.findByUserId(updateUserInfoRequest.getUserId());
+            if (existingUser != null) {
+                return Response.<User>builder()
+                        .code("400")
+                        .info("用户ID已存在")
+                        .build();
+            }
+        }
+
+        // 验证用户名唯一性
+        if (updateUserInfoRequest.getUsername() != null && !updateUserInfoRequest.getUsername().equals(user.getUsername())) {
+            User existingUser = userRepository.findByUsername(updateUserInfoRequest.getUsername());
+            if (existingUser != null) {
+                return Response.<User>builder()
+                        .code("400")
+                        .info("用户名已存在")
+                        .build();
+            }
+        }
+
+        // 验证邮箱唯一性
+        if (updateUserInfoRequest.getEmail() != null && updateUserInfoRequest.getEmail().trim().length() > 0) {
+            if (!updateUserInfoRequest.getEmail().equals(user.getEmail())) {
+                User existingUser = userRepository.findByEmail(updateUserInfoRequest.getEmail());
+                if (existingUser != null) {
+                    return Response.<User>builder()
+                            .code("400")
+                            .info("邮箱已存在")
+                            .build();
+                }
+            }
+        }
+
+        // 部分更新：只更新非空字段
+        if (updateUserInfoRequest.getUserId() != null) {
+            user.setUserId(updateUserInfoRequest.getUserId());
+        }
+        if (updateUserInfoRequest.getEmail() != null && updateUserInfoRequest.getEmail().trim().length() > 0) {
+            user.setEmail(updateUserInfoRequest.getEmail());
+        }
+        if (updateUserInfoRequest.getUsername() != null && updateUserInfoRequest.getUsername().trim().length() > 0) {
+            user.setUsername(updateUserInfoRequest.getUsername());
+        }
+        if (updateUserInfoRequest.getAge() != null) {
+            user.setAge(updateUserInfoRequest.getAge());
+        }
+        if (updateUserInfoRequest.getGender() != null) {
+            user.setGender(updateUserInfoRequest.getGender());
+        }
+        if (updateUserInfoRequest.getAvatarUrl() != null && updateUserInfoRequest.getAvatarUrl().trim().length() > 0) {
+            user.setAvatarUrl(updateUserInfoRequest.getAvatarUrl());
+        }
+        if (updateUserInfoRequest.getBio() != null && updateUserInfoRequest.getBio().trim().length() > 0) {
+            user.setBio(updateUserInfoRequest.getBio());
+        }
+        if (updateUserInfoRequest.getSignature() != null && updateUserInfoRequest.getSignature().trim().length() > 0) {
+            user.setSignature(updateUserInfoRequest.getSignature());
+        }
+
+        // 设置更新时间
+        user.setUpdateTime(LocalDateTime.now());
+
+        // 更新用户
+        user = userRepository.update(user);
+        return Response.<User>builder()
+                .code("200")
+                .info("更新用户信息成功")
+                .data(user)
+                .build();
     }
 
     /**
@@ -232,7 +400,7 @@ public class UserDomainService implements IUserDomainService{
      */
     private User findUserByPassword(List<User> users, String password) {
         for (User user : users) {
-            if (passwordEncoder.matches(password, user.getPassword())) {
+            if (PasswordEncoder.matches(password, user.getPassword())) {
                 return user;
             }
         }

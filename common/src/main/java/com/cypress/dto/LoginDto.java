@@ -1,4 +1,4 @@
-package com.cypress.app.user.dto;
+package com.cypress.dto;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

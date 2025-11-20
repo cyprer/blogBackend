@@ -10,7 +10,8 @@ public interface IUserDao {
     UserPo findByPhone(String phone);
     UserPo findByUsername(String username);
     List<UserPo> findAllByUsername(String username);
-    UserPo selectById(Long id);
+    UserPo selectByUserId(Long id);
+    UserPo findByEmail(String email);
     void insert(UserPo userPo);
-    void updateById(UserPo userPo);
+    void updateByUserId(UserPo userPo);
 }

@@ -1,10 +1,9 @@
 package com.cypress.utils;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
-@Component
+
 public class PasswordEncoder {
     // 单例模式：BCryptPasswordEncoder 实例（线程安全，可全局复用）
     private static final BCryptPasswordEncoder BCRYPT_ENCODER = new BCryptPasswordEncoder();
