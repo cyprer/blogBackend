@@ -21,6 +21,11 @@ public class LoginInterceptor implements HandlerInterceptor {
     private UserAppService userAppService;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 对于OPTIONS请求直接放行，这是CORS预检请求
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
         // 从请求头中获取token
         String token = request.getHeader("Authorization");
 
@@ -28,6 +33,11 @@ public class LoginInterceptor implements HandlerInterceptor {
         if (token == null || token.isEmpty()) {
             responseUnauthorized(response, "未提供认证令牌");
             return false;
+        }
+
+        // 如果token以"Bearer "开头，去掉前缀
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
         }
 
         // 验证token有效性
@@ -49,6 +59,13 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         // 验证通过，继续执行后续操作
         return true;
+    }
+
+    // 添加此方法确保在请求完成后清理ThreadLocal中的用户信息
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 清理ThreadLocal中的用户信息，防止内存泄漏
+        UserContext.clear();
     }
 
     private void responseUnauthorized(HttpServletResponse response, String message) throws IOException {

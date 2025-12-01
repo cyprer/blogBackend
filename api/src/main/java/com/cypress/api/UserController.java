@@ -5,7 +5,6 @@ import com.cypress.dto.UserInfo;
 import com.cypress.request.*;
 import com.cypress.dto.LoginDto;
 import com.cypress.dto.RegisterDto;
-import com.cypress.dto.UpdateUserInfoResponse;
 import com.cypress.response.Response;
 import com.cypress.utils.ResponseUtil;
 import io.swagger.annotations.Api;
@@ -33,7 +32,7 @@ public class UserController {
      * @param phone 手机号
      * @return 验证码
      */
-    @PostMapping("/send_code")
+    @PostMapping("/send-code")
     public ResponseEntity<Response<String>> sendCode(@RequestParam String phone) {
         Response<String> response = userAppService.sendCode(phone);
         return ResponseUtil.toResponseEntity(response);
@@ -77,8 +76,13 @@ public class UserController {
      */
     @GetMapping("/me")
     @ApiOperation(value = "获取当前登录用户信息", notes = "获取当前登录用户的信息")
-    public ResponseEntity<Response<UserInfo>> me() {
-        Response<UserInfo> response = userAppService.me();
+    public ResponseEntity<Response<UserInfo>> me(@RequestHeader(value = "Authorization", required = false) String token) {
+        // 如果token以"Bearer "开头，去掉前缀
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        
+        Response<UserInfo> response = userAppService.me(token);
         return ResponseUtil.toResponseEntity(response);
     }
 
@@ -87,7 +91,7 @@ public class UserController {
      * @param request 设置密码请求参数
      * @return 设置成功响应
      */
-    @PostMapping("/set_password")
+    @PostMapping("/set-password")
     @ApiOperation(value = "设置用户密码", notes = "注册成功后设置用户密码")
     public ResponseEntity<Response<String>> setPassword(@RequestBody SetPasswordRequest request) {
         Response<String> response = userAppService.setPassword(request);
@@ -126,8 +130,14 @@ public class UserController {
      */
     @PatchMapping("/{userId}")
     @ApiOperation(value = "更新用户公开信息", notes = "使用PATCH方法部分更新用户信息，只传需要更新的字段")
-    public ResponseEntity<Response<UserInfo>> updateUserInfo(@PathVariable Long userId, @RequestBody @Valid UpdateUserInfoRequest updateUserInfoRequest) {
-        Response<UserInfo> response = userAppService.updateUserInfo(userId, updateUserInfoRequest);
+    public ResponseEntity<Response<UserInfo>> updateUserInfo(@PathVariable Long userId, @RequestBody @Valid UpdateUserInfoRequest updateUserInfoRequest,
+                                                             @RequestHeader(value = "Authorization", required = false) String token) {
+        // 如果token以"Bearer "开头，去掉前缀
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+        
+        Response<UserInfo> response = userAppService.updateUserInfoWithToken(userId, updateUserInfoRequest, token);
         return ResponseUtil.toResponseEntity(response);
     }
 
