@@ -1,6 +1,7 @@
 package com.cypress.app.user;
 
 
+import com.cypress.dto.UpdateUserInfoResponse;
 import com.cypress.dto.UserInfo;
 import com.cypress.request.*;
 import com.cypress.dto.LoginDto;
@@ -62,6 +63,8 @@ public class UserAppService {
         User user = userResponse.getData();
         UserInfo userInfo = new UserInfo();
         BeanUtils.copyProperties(user, userInfo);
+        // 将Long类型的userId转换为String类型避免前端精度问题
+        userInfo.setUserId(String.valueOf(user.getUserId()));
         UserContext.setUserInfo(userInfo);
         // 注册成功，转换为RegisterDto
         RegisterDto registerDto = convertToResponse(userResponse.getData());
@@ -115,117 +118,83 @@ public class UserAppService {
         
         // 登录成功，生成 JWT token
         User user = userResponse.getData();
-        // 构建响应
         String token = jwtUtil.generateToken(user.getUserId());
+        
+        // 构造登录响应
         LoginDto loginDto = new LoginDto();
-        loginDto.setToken(token); // 设置生成的 token
-        loginDto.setUserInfo(convertToResponse(user));
-
+        loginDto.setToken(token);
+        
+        // 构造用户信息
+        UserInfo userInfo = new UserInfo();
+        BeanUtils.copyProperties(user, userInfo);
+        // 将Long类型的userId转换为String类型避免前端精度问题
+        userInfo.setUserId(String.valueOf(user.getUserId()));
+        loginDto.setUserInfo(userInfo);
+        
         return Response.<LoginDto>builder()
                 .code("200")
                 .info("登录成功")
                 .data(loginDto)
                 .build();
     }
-    /**
-     * 设置用户密码
-     * @param request 设置密码请求
-     * @return 设置成功响应
-     */
-    public Response<String> setPassword(SetPasswordRequest request) {
-        Response<User> userResponse = userDomainService.setPassword(
-                request.getUserId(),
-                request.getPassword()
-        );
 
-        return buildSimpleResponse(userResponse);
-    }
-    
     /**
-     * 构建简单响应的通用方法
-     * @param response 用户领域服务响应
-     * @return 简单响应
+     * 获取用户信息
+     * @param userIdStr 用户ID字符串
+     * @return 用户信息
      */
-    private Response<String> buildSimpleResponse(Response<?> response) {
-        if (!"200".equals(response.getCode())) {
-            return Response.<String>builder()
-                    .code(response.getCode())
-                    .info(response.getInfo())
+    public Response<UserInfo> getUserInfo(String userIdStr) {
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdStr);
+        } catch (NumberFormatException e) {
+            return Response.<UserInfo>builder()
+                    .code("400")
+                    .info("用户ID格式不正确")
                     .build();
         }
-
-        return Response.<String>builder()
-                .code("200")
-                .info("操作成功")
-                .build();
-    }
-     /**
-     * 将领域实体转换为响应DTO
-     * @param user 领域实体
-     * @return 响应DTO
-     */
-    private RegisterDto convertToResponse(User user) {
-        if (user == null) {
-            return null;
-        }
-        RegisterDto response = new RegisterDto();
-        BeanUtils.copyProperties(user, response);
-        return response;
-    }
-    
-
-    public Response<UserInfo> getUserInfo(Long userId) {
-        Response<User> response = userDomainService.getUserInfo(userId);
-        return buildUserInfoResponse(response);
-    }
-    
-    public Response<UserInfo> me(String token) {
-        // 从 token 中解析用户信息，而不是从 UserContext 获取
-        Long userId = jwtUtil.validateToken(token);
-        if (userId == null) {
+        Response<User> userResponse = userDomainService.getUserInfo(userId);
+        if (!"200".equals(userResponse.getCode())) {
             return Response.<UserInfo>builder()
-                    .code("401")
-                    .info("Token无效或已过期")
+                    .code(userResponse.getCode())
+                    .info(userResponse.getInfo())
                     .build();
         }
         
-        // 根据用户ID获取用户信息
-        Response<User> userResponse = userDomainService.getUserInfo(userId);
-        return buildUserInfoResponse(userResponse);
-    }
-    
-    /**
-     * 构建用户信息响应的通用方法
-     * @param response 用户领域服务响应
-     * @return 用户信息响应
-     */
-    private Response<UserInfo> buildUserInfoResponse(Response<User> response) {
-        if (!"200".equals(response.getCode())) {
-            return Response.<UserInfo>builder()
-                    .code(response.getCode())
-                    .info(response.getInfo())
-                    .build();
-        }
+        User user = userResponse.getData();
         UserInfo userInfo = new UserInfo();
-        BeanUtils.copyProperties(response.getData(), userInfo);
+        BeanUtils.copyProperties(user, userInfo);
+        // 将Long类型的userId转换为String类型避免前端精度问题
+        userInfo.setUserId(String.valueOf(user.getUserId()));
+        
         return Response.<UserInfo>builder()
-                .code(response.getCode())
-                .info(response.getInfo())
+                .code("200")
+                .info("获取用户信息成功")
                 .data(userInfo)
                 .build();
     }
 
     /**
-     * 更新用户信息的新方法，通过token获取用户信息
-     * @param userId 用户ID
-     * @param updateUserInfoRequest 更新用户信息请求参数
+     * 使用token更新用户信息
+     * @param userIdStr 用户ID字符串
+     * @param updateUserInfoRequest 更新用户信息请求
      * @param token 用户认证token
      * @return 更新后的用户信息
      */
-    public Response<UserInfo> updateUserInfoWithToken(Long userId, UpdateUserInfoRequest updateUserInfoRequest, String token) {
+    public Response<UpdateUserInfoResponse> updateUserInfoWithToken(String userIdStr, UpdateUserInfoRequest updateUserInfoRequest, String token) {
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdStr);
+        } catch (NumberFormatException e) {
+            return Response.<UpdateUserInfoResponse>builder()
+                    .code("400")
+                    .info("用户ID格式不正确")
+                    .build();
+        }
+        
         // 权限验证：检查当前登录用户是否有权限更新目标用户信息
         if (token == null || token.isEmpty()) {
-            return Response.<UserInfo>builder()
+            return Response.<UpdateUserInfoResponse>builder()
                     .code("401")
                     .info("用户未登录")
                     .build();
@@ -234,7 +203,7 @@ public class UserAppService {
         // 从token中解析用户ID
         Long currentUserId = jwtUtil.validateToken(token);
         if (currentUserId == null) {
-            return Response.<UserInfo>builder()
+            return Response.<UpdateUserInfoResponse>builder()
                     .code("401")
                     .info("Token无效或已过期")
                     .build();
@@ -242,7 +211,7 @@ public class UserAppService {
         
         // 只有用户本人可以更新自己的信息
         if (!currentUserId.equals(userId)) {
-            return Response.<UserInfo>builder()
+            return Response.<UpdateUserInfoResponse>builder()
                     .code("403")
                     .info("无权限更新其他用户信息")
                     .build();
@@ -250,26 +219,130 @@ public class UserAppService {
         
         Response<User> response = userDomainService.updateUserInfo(userId, updateUserInfoRequest);
         if (!"200".equals(response.getCode())) {
-            return Response.<UserInfo>builder()
+            return Response.<UpdateUserInfoResponse>builder()
                     .code(response.getCode())
                     .info(response.getInfo())
                     .build();
         }
         
-        User updatedUser = response.getData();
-        UserInfo userInfo = new UserInfo();
-        BeanUtils.copyProperties(updatedUser, userInfo);
+        User user = response.getData();
+        if (user == null) {
+            return Response.<UpdateUserInfoResponse>builder()
+                    .code("500")
+                    .info("服务器内部错误：用户数据为空")
+                    .build();
+        }
         
-        return Response.<UserInfo>builder()
-                .code(response.getCode())
-                .info(response.getInfo())
-                .data(userInfo)
+        UpdateUserInfoResponse updateUserInfoResponse = new UpdateUserInfoResponse();
+        BeanUtils.copyProperties(user, updateUserInfoResponse);
+        // 将Long类型的userId转换为String类型避免前端精度问题
+        updateUserInfoResponse.setUserId(String.valueOf(user.getUserId()));
+        
+        // 无论userId是否变化，都生成新的token以确保安全性
+        String newToken = jwtUtil.generateToken(user.getUserId());
+        updateUserInfoResponse.setNewToken(newToken);
+        
+        return Response.<UpdateUserInfoResponse>builder()
+                .code("200")
+                .info("更新用户信息成功")
+                .data(updateUserInfoResponse)
                 .build();
     }
 
-    public Response<String> setPhone(Long userId, String phone) {
-        return userDomainService.setPhone(userId, phone);
+    /**
+     * 获取当前登录用户信息
+     * @param token 用户认证token
+     * @return 当前登录用户信息
+     */
+    public Response<UserInfo> me(String token) {
+        // 从token中解析用户ID
+        Long userId = jwtUtil.validateToken(token);
+        if (userId == null) {
+            return Response.<UserInfo>builder()
+                    .code("401")
+                    .info("Token无效或已过期")
+                    .build();
+        }
+        
+        // 获取用户信息
+        return getUserInfo(String.valueOf(userId));
     }
 
+    /**
+     * 设置用户密码
+     * @param request 设置密码请求
+     * @return 设置结果
+     */
+    public Response<String> setPassword(SetPasswordRequest request) {
+        if (request.getUserId() == null) {
+            return Response.<String>builder()
+                    .code("400")
+                    .info("用户ID不能为空")
+                    .build();
+        }
+        Response<User> userResponse = userDomainService.setPassword(
+                request.getUserId(),
+                request.getPassword()
+        );
+        
+        if (!"200".equals(userResponse.getCode())) {
+            return Response.<String>builder()
+                    .code(userResponse.getCode())
+                    .info(userResponse.getInfo())
+                    .build();
+        }
+        
+        return Response.<String>builder()
+                .code("200")
+                .info("设置密码成功")
+                .build();
+    }
 
+    /**
+     * 设置用户手机号
+     * @param userIdStr 用户ID字符串
+     * @param phone 手机号
+     * @return 设置结果
+     */
+    public Response<String> setPhone(String userIdStr, String phone) {
+        Long userId;
+        try {
+            userId = Long.parseLong(userIdStr);
+        } catch (NumberFormatException e) {
+            return Response.<String>builder()
+                    .code("400")
+                    .info("用户ID格式不正确")
+                    .build();
+        }
+        Response<String> userResponse = userDomainService.setPhone(
+                userId,
+                phone
+        );
+
+        if (!"200".equals(userResponse.getCode())) {
+            return Response.<String>builder()
+                    .code(userResponse.getCode())
+                    .info(userResponse.getInfo())
+                    .build();
+        }
+
+        return Response.<String>builder()
+                .code("200")
+                .info("设置手机号成功")
+                .data(userResponse.getData())
+                .build();
+    }
+
+    /**
+     * 将User转换为RegisterDto
+     * @param user 用户实体
+     * @return 注册响应DTO
+     */
+    private RegisterDto convertToResponse(User user) {
+        RegisterDto registerDto = new RegisterDto();
+        BeanUtils.copyProperties(user, registerDto);
+        // 将Long类型的userId转换为String类型避免前端精度问题
+        registerDto.setUserId(String.valueOf(user.getUserId()));
+        return registerDto;
+    }
 }

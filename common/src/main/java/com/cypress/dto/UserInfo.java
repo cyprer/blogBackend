@@ -13,8 +13,9 @@ public class UserInfo {
 
     /**
      * 用户ID - 唯一标识
+     * 使用String类型避免JavaScript中Number精度问题
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 邮箱

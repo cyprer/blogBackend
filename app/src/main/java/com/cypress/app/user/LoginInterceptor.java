@@ -48,7 +48,7 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         // 获取用户信息并设置到上下文
-        Response<UserInfo> userInfoResponse = userAppService.getUserInfo(userId);
+        Response<UserInfo> userInfoResponse = userAppService.getUserInfo(String.valueOf(userId));
         if (!"200".equals(userInfoResponse.getCode()) || userInfoResponse.getData() == null) {
             responseUnauthorized(response, "用户信息不存在");
             return false;

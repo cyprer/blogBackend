@@ -20,7 +20,7 @@ import org.hibernate.validator.constraints.URL;
 public class UpdateUserInfoRequest {
 
     @ApiModelProperty(value = "用户ID（可选，不更新则不传此字段）")
-    private Long userId;
+    private String userId;
 
     @ApiModelProperty(value = "邮箱")
     @Email(message = "邮箱格式不正确")

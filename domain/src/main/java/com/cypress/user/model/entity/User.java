@@ -1,7 +1,6 @@
 package com.cypress.user.model.entity;
 
 import com.cypress.constants.Constants;
-import com.cypress.utils.PasswordEncoder;
 import com.cypress.utils.SnowflakeIdGenerator;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +18,11 @@ import java.time.LocalDateTime;
 public class User {
 
     public static String defaultRawPassword ="515221";
+
+    /**
+     * 主键ID - 数据库主键
+     */
+    private Long id = 0L;
 
     /**
      * 用户ID - 唯一标识
@@ -100,6 +104,7 @@ public class User {
      * @param phone 手机号
      */
     public void register(String phone) {
+        // id 字段由数据库自动生成，不需要在代码中设置
         this.userId = SnowflakeIdGenerator.generateId();
         this.phone = phone;
         this.password = defaultRawPassword;

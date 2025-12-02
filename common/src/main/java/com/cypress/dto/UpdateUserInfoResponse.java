@@ -1,23 +1,26 @@
 package com.cypress.dto;
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@ApiModel(description = "更新用户信息响应")
 public class UpdateUserInfoResponse {
-
-    @ApiModelProperty(value = "用户信息")
-    private UserInfo userInfo;
-
-    @ApiModelProperty(value = "新的访问令牌（当userId发生变化时返回）")
+    /**
+     * 用户ID - 唯一标识
+     * 使用String类型避免JavaScript中Number精度问题
+     */
+    private String userId;
+    private String phone;
+    private String email;
+    private String username;
+    private Integer age;
+    private Integer gender;
+    private String avatarUrl;
+    private String bio;
+    private String signature;
+    
+    /**
+     * 更新后的token
+     * 当用户ID发生变化时，需要返回新的token
+     */
     private String newToken;
-
-    @ApiModelProperty(value = "是否userId发生了变化")
-    private Boolean userIdChanged;
 }

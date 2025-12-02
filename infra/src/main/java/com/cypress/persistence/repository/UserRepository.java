@@ -44,6 +44,9 @@ public class UserRepository implements IUserRepository {
 
     @Override
     public User save(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("用户对象不能为空");
+        }
         UserPo userPo = convertToPo(user);
         userDao.insert(userPo);
         return user;
@@ -59,8 +62,21 @@ public class UserRepository implements IUserRepository {
     public User update(User user) {
         UserPo userPo = convertToPo(user);
         userDao.updateByUserId(userPo);
-        user = findByUserId(user.getUserId());
-        return user;
+        // 更新后通过userId查询用户，确保获取最新数据
+        return findByUserId(user.getUserId());
+    }
+    
+    @Override
+    public User updateUserId(Long id, Long newUserId) {
+        userDao.updateUserIdById(id, newUserId);
+        // 更新后通过新的userId查询用户，确保获取最新数据
+        return findByUserId(newUserId);
+    }
+    
+    @Override
+    public User findById(Long id) {
+        UserPo userPo = userDao.selectById(id);
+        return convertToDomain(userPo);
     }
 
     @Override

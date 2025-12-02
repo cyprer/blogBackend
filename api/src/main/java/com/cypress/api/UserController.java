@@ -2,6 +2,7 @@ package com.cypress.api;
 
 import com.cypress.app.user.UserAppService;
 import com.cypress.dto.UserInfo;
+import com.cypress.dto.UpdateUserInfoResponse;
 import com.cypress.request.*;
 import com.cypress.dto.LoginDto;
 import com.cypress.dto.RegisterDto;
@@ -105,7 +106,7 @@ public class UserController {
      */
     @PostMapping("/{userId}/phone")
     @ApiOperation(value = "设置用户手机号", notes = "设置用户手机号")
-    public ResponseEntity<Response<String>> setPhone(@PathVariable Long userId, @RequestParam String phone) {
+    public ResponseEntity<Response<String>> setPhone(@PathVariable String userId, @RequestParam String phone) {
         Response<String> response = userAppService.setPhone(userId, phone);
         return ResponseUtil.toResponseEntity(response);
     }
@@ -117,7 +118,7 @@ public class UserController {
      */
     @GetMapping("/{userId}")
     @ApiOperation(value = "获取用户信息", notes = "根据用户ID获取用户信息")
-    public ResponseEntity<Response<UserInfo>> getUserInfo(@PathVariable Long userId) {
+    public ResponseEntity<Response<UserInfo>> getUserInfo(@PathVariable String userId) {
         Response<UserInfo> response = userAppService.getUserInfo(userId);
         return ResponseUtil.toResponseEntity(response);
     }
@@ -130,14 +131,14 @@ public class UserController {
      */
     @PatchMapping("/{userId}")
     @ApiOperation(value = "更新用户公开信息", notes = "使用PATCH方法部分更新用户信息，只传需要更新的字段")
-    public ResponseEntity<Response<UserInfo>> updateUserInfo(@PathVariable Long userId, @RequestBody @Valid UpdateUserInfoRequest updateUserInfoRequest,
+    public ResponseEntity<Response<UpdateUserInfoResponse>> updateUserInfo(@PathVariable String userId, @RequestBody @Valid UpdateUserInfoRequest updateUserInfoRequest,
                                                              @RequestHeader(value = "Authorization", required = false) String token) {
         // 如果token以"Bearer "开头，去掉前缀
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
         
-        Response<UserInfo> response = userAppService.updateUserInfoWithToken(userId, updateUserInfoRequest, token);
+        Response<UpdateUserInfoResponse> response = userAppService.updateUserInfoWithToken(userId, updateUserInfoRequest, token);
         return ResponseUtil.toResponseEntity(response);
     }
 

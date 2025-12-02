@@ -74,4 +74,19 @@ public interface IUserRepository {
      */
     User findByEmail(String email);
 
+    /**
+     * 根据数据库主键查找用户
+     * @param id 数据库主键
+     * @return 用户实体
+     */
+    User findById(Long id);
+
+    /**
+     * 更新用户ID
+     * @param id 用户主键ID
+     * @param newUserId 新的用户业务ID
+     * @return 更新后的用户
+     */
+    User updateUserId(Long id, Long newUserId);
+
 }
